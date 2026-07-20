@@ -6,7 +6,7 @@ use lightyear::netcode::{server_plugin::NetcodeConfig, NetcodeServer};
 use lightyear::prelude::server::{ServerPlugins, ServerUdpIo};
 use lightyear::prelude::*;
 
-use crate::protocol::{self, SERVER_ADDR};
+use crate::protocol::{self, PlayerMarker, SERVER_ADDR};
 
 pub struct ServerPlugin;
 
@@ -17,7 +17,7 @@ impl Plugin for ServerPlugin {
             tick_duration: Duration::from_secs_f64(protocol::TIMESTEP),
         });
         app.add_systems(Startup, startup);
-        app.add_observer(|_: On<Add, Connected>| info!("client connected!"));
+        app.add_observer(on_connect);
     }
 }
 
@@ -32,4 +32,13 @@ fn startup(mut cmds: Commands) -> Result {
 
     cmds.trigger(Start { entity: server });
     Ok(())
+}
+
+/// runs when something that has Connected has been added
+fn on_connect(trigger: On<Add, Connected>, mut cmds: Commands) {
+    cmds.entity(trigger.entity).insert(ReplicationSender);
+    cmds.spawn((
+        PlayerMarker,
+        Replicate::to_clients(NetworkTarget::All), // sends entity to all players
+    ));
 }

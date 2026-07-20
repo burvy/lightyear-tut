@@ -1,8 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use bevy::prelude::*;
-use lightyear::connection::client::ClientState;
 use lightyear::netcode::Key;
 use lightyear::prelude::client::ClientPlugins;
 use lightyear::prelude::*;
@@ -12,9 +11,10 @@ use lightyear::{
     netcode::{auth::Authentication, client_plugin::NetcodeConfig, NetcodeClient},
 };
 
-use crate::protocol::{self, SERVER_ADDR};
+use crate::protocol::{self, PlayerMarker, SERVER_ADDR};
 
-const CLIENT_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 4000);
+/// Client address, each client must have a unique port. 0 lets the OS choose any available one
+const CLIENT_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
 pub struct ClientPlugin;
 
 impl Plugin for ClientPlugin {
@@ -24,13 +24,17 @@ impl Plugin for ClientPlugin {
             tick_duration: Duration::from_secs_f64(protocol::TIMESTEP),
         });
         app.add_systems(Startup, startup);
+        app.add_observer(|_: On<Add, PlayerMarker>| info!("a player was replicated to me!"));
     }
 }
 
 fn startup(mut cmds: Commands) -> Result {
     let auth = Authentication::Manual {
         server_addr: SERVER_ADDR,
-        client_id: 1, // TODO: get a better client id later
+        client_id: SystemTime::now() // sets id as current nanosecond time (rarely overlaps)
+            .duration_since(UNIX_EPOCH)
+            .expect("Couldn't set time")
+            .as_nanos() as u64,
         private_key: Key::default(),
         protocol_id: 0,
     };
