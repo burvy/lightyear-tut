@@ -1,6 +1,7 @@
-use avian3d::prelude::*;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+
+pub const TIMESTEP: f64 = 1.0 / 64.0
 
 pub struct ProtocolPlugin;
 
