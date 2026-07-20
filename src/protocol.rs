@@ -1,7 +1,11 @@
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-pub const TIMESTEP: f64 = 1.0 / 64.0
+pub const TIMESTEP: f64 = 1.0 / 64.0;
+
+pub const SERVER_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 5000);
 
 pub struct ProtocolPlugin;
 
