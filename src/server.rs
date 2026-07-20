@@ -2,12 +2,9 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use lightyear::connection::server::Start;
+use lightyear::netcode::{server_plugin::NetcodeConfig, NetcodeServer};
+use lightyear::prelude::server::{ServerPlugins, ServerUdpIo};
 use lightyear::prelude::*;
-use lightyear::{
-    netcode::{server_plugin::NetcodeConfig, NetcodeServer},
-    prelude::server::ServerPlugins,
-    webtransport::server::WebTransportServerIo,
-};
 
 use crate::protocol::{self, SERVER_ADDR};
 

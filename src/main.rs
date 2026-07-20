@@ -5,7 +5,7 @@ use bevy::{
         RenderPlugin,
     },
 };
-use lightyear::prelude::*;
+
 use std::io;
 
 mod client;
@@ -21,6 +21,7 @@ pub enum Mode {
 
 fn main() {
     let mut app = App::new();
+    // switching backend to Vulkan to get it to work on my machine
     app.add_plugins(DefaultPlugins.set(RenderPlugin {
         render_creation: RenderCreation::Automatic(Box::new(WgpuSettings {
             backends: Some(Backends::VULKAN),
@@ -28,7 +29,11 @@ fn main() {
         })),
         ..default()
     }));
+
+    // mode will store whether we are a client or a server right now
     let mode;
+
+    // let user choose client or server
     println!("Choose:\n1. Client\n2. Server\n");
     let mut input: String = String::new();
     io::stdin().read_line(&mut input).expect("Couldn't read");
@@ -42,10 +47,12 @@ fn main() {
     match choice {
         1 => {
             mode = Mode::Client;
+            // run client app if client
             app.add_plugins(client::ClientPlugin);
         }
         2 => {
             mode = Mode::Server;
+            // run server app if server
             app.add_plugins(server::ServerPlugin);
         }
         _ => {
@@ -53,6 +60,8 @@ fn main() {
         }
     }
     println!("You have chosen mode {:?}", mode);
+
+    // protocolplugin must be added last
     app.add_plugins(protocol::ProtocolPlugin);
     app.run();
 }
