@@ -17,6 +17,7 @@ impl Plugin for ServerPlugin {
             tick_duration: Duration::from_secs_f64(protocol::TIMESTEP),
         });
         app.add_systems(Startup, startup);
+        app.add_observer(|_: On<Add, Connected>| info!("client connected!"));
     }
 }
 
