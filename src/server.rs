@@ -6,7 +6,7 @@ use lightyear::netcode::{server_plugin::NetcodeConfig, NetcodeServer};
 use lightyear::prelude::server::{ServerPlugins, ServerUdpIo};
 use lightyear::prelude::*;
 
-use crate::protocol::{self, PlayerMarker, SERVER_ADDR};
+use crate::protocol::{self, PlayerMarker, PlayerPosition, SERVER_ADDR};
 
 pub struct ServerPlugin;
 
@@ -39,6 +39,7 @@ fn on_connect(trigger: On<Add, Connected>, mut cmds: Commands) {
     cmds.entity(trigger.entity).insert(ReplicationSender);
     cmds.spawn((
         PlayerMarker,
+        PlayerPosition(Vec3::ZERO),
         Replicate::to_clients(NetworkTarget::All), // sends entity to all players
     ));
 }

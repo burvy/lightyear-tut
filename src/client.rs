@@ -11,23 +11,30 @@ use lightyear::{
     netcode::{auth::Authentication, client_plugin::NetcodeConfig, NetcodeClient},
 };
 
-use crate::protocol::{self, PlayerMarker, SERVER_ADDR};
+use crate::protocol::{self, PlayerMarker, PlayerPosition, SERVER_ADDR};
 
 /// Client address, each client must have a unique port. 0 lets the OS choose any available one
 const CLIENT_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
+
+/// The client side app
 pub struct ClientPlugin;
 
 impl Plugin for ClientPlugin {
     fn build(&self, app: &mut App) {
         println!("Client Plugin added!"); // TODO: Remove debug logging
         app.add_plugins(ClientPlugins {
-            tick_duration: Duration::from_secs_f64(protocol::TIMESTEP),
+            tick_duration: Duration::from_secs_f64(protocol::TIMESTEP), // serv and client must share timestep
         });
-        app.add_systems(Startup, startup);
+        app.add_systems(
+            Startup,
+            (startup, player_scene.spawn(), world_scene.spawn()),
+        );
+        app.add_systems(Update, (draw_players, sync_players));
         app.add_observer(|_: On<Add, PlayerMarker>| info!("a player was replicated to me!"));
     }
 }
 
+/// Automatically joins the server set with the SERVER_ADDR
 fn startup(mut cmds: Commands) -> Result {
     let auth = Authentication::Manual {
         server_addr: SERVER_ADDR,
@@ -51,4 +58,44 @@ fn startup(mut cmds: Commands) -> Result {
         .id();
     cmds.trigger(Connect { entity: client });
     Ok(())
+}
+
+/// build the player (spawn things)
+fn player_scene() -> impl Scene {
+    let p_transform =
+        Transform::from_translation(Vec3::new(0.0, 5.0, 0.0)).looking_at(Vec3::ZERO, Vec3::Y);
+    bsn! {
+        #LocalPlayer
+        Camera3d
+        // wrap whatever you want in template_value() to force evaluate it
+        template_value(p_transform)
+    }
+}
+
+fn world_scene() -> impl Scene {
+    let l_transform =
+        Transform::from_translation(Vec3::new(10.0, 5.0, 0.0)).looking_at(Vec3::ZERO, Vec3::Y);
+    bsn! {
+        DirectionalLight {
+            color: Color::WHITE,
+            illuminance: 200.0,
+        }
+        template_value(l_transform)
+
+    }
+}
+
+fn draw_players(mut cmds: Commands, players: Query<Entity, Added<PlayerPosition>>) {
+    players.iter().for_each(|entity| {
+        cmds.entity(entity).queue_apply_scene(bsn! {
+            Mesh3d(asset_value(Cuboid::from_length(1.0)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+        });
+    });
+}
+
+fn sync_players(mut q: Query<(&PlayerPosition, &mut Transform)>) {
+    q.iter_mut().for_each(|(pos, mut transform)| {
+        transform.translation = pos.0;
+    })
 }

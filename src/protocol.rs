@@ -15,11 +15,16 @@ impl Plugin for ProtocolPlugin {
         println!("Protocol Plugin added!"); // TODO: Remove debug logging
 
         app.component::<PlayerMarker>().replicate();
+        app.component::<PlayerPosition>().replicate();
     }
 }
 
+// lots of components required for replicating things
 #[derive(Component, Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct PlayerMarker;
+
+#[derive(Component, Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct PlayerPosition(pub Vec3);
 
 /// A bunch of inputs that are sent over to the server
 /// and must be simulated in one tick.
