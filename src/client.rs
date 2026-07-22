@@ -2,8 +2,10 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use bevy::prelude::*;
+use lightyear::input::client::InputSystems;
 use lightyear::netcode::Key;
 use lightyear::prelude::client::ClientPlugins;
+use lightyear::prelude::input::native::{ActionState, InputMarker};
 use lightyear::prelude::*;
 use lightyear::{
     connection::client::Connect,
@@ -11,7 +13,7 @@ use lightyear::{
     netcode::{auth::Authentication, client_plugin::NetcodeConfig, NetcodeClient},
 };
 
-use crate::protocol::{self, PlayerMarker, PlayerPosition, SERVER_ADDR};
+use crate::protocol::{self, Inputs, PlayerMarker, PlayerPosition, SERVER_ADDR};
 
 /// Client address, each client must have a unique port. 0 lets the OS choose any available one
 const CLIENT_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
@@ -26,11 +28,19 @@ impl Plugin for ClientPlugin {
             tick_duration: Duration::from_secs_f64(protocol::TIMESTEP), // serv and client must share timestep
         });
         app.add_systems(
-            Startup,
+            Startup, // initialize world
             (startup, player_scene.spawn(), world_scene.spawn()),
         );
         app.add_systems(Update, (draw_players, sync_players));
         app.add_observer(|_: On<Add, PlayerMarker>| info!("a player was replicated to me!"));
+        app.add_systems(
+            FixedPreUpdate,
+            buffer_input.in_set(InputSystems::WriteClientInputs),
+        );
+        app.add_observer(|t: On<Add, Controlled>, mut cmds: Commands| {
+            cmds.entity(t.entity)
+                .insert(InputMarker::<Inputs>::default());
+        });
     }
 }
 
@@ -75,7 +85,7 @@ fn player_scene() -> impl Scene {
 /// build the client side world, including the light so the player can actually see
 fn world_scene() -> impl Scene {
     let l_transform =
-        Transform::from_translation(Vec3::new(10.0, 5.0, 0.0)).looking_at(Vec3::ZERO, Vec3::Y);
+        Transform::from_translation(Vec3::new(0.0, 5.0, 10.0)).looking_at(Vec3::ZERO, Vec3::Y);
     bsn! {
         DirectionalLight {
             color: Color::WHITE,
@@ -101,4 +111,18 @@ fn sync_players(mut q: Query<(&PlayerPosition, &mut Transform)>) {
     q.iter_mut().for_each(|(pos, mut transform)| {
         transform.translation = pos.0;
     })
+}
+
+fn buffer_input(
+    mut query: Query<&mut ActionState<Inputs>, With<InputMarker<Inputs>>>,
+    keys: Res<ButtonInput<KeyCode>>,
+) {
+    if let Ok(mut action) = query.single_mut() {
+        action.0 = Inputs {
+            up: keys.pressed(KeyCode::KeyW),
+            down: keys.pressed(KeyCode::KeyS),
+            left: keys.pressed(KeyCode::KeyA),
+            right: keys.pressed(KeyCode::KeyD),
+        };
+    }
 }

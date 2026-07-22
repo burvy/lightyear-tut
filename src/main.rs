@@ -11,6 +11,7 @@ use std::io;
 mod client;
 mod protocol;
 mod server;
+mod shared;
 
 #[derive(Debug)]
 pub enum Mode {
