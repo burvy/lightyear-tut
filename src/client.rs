@@ -63,7 +63,7 @@ fn startup(mut cmds: Commands) -> Result {
 /// build the player (spawn things)
 fn player_scene() -> impl Scene {
     let p_transform =
-        Transform::from_translation(Vec3::new(0.0, 5.0, 0.0)).looking_at(Vec3::ZERO, Vec3::Y);
+        Transform::from_translation(Vec3::new(0.0, 5.0, 5.0)).looking_at(Vec3::ZERO, Vec3::Y);
     bsn! {
         #LocalPlayer
         Camera3d
@@ -72,19 +72,21 @@ fn player_scene() -> impl Scene {
     }
 }
 
+/// build the client side world, including the light so the player can actually see
 fn world_scene() -> impl Scene {
     let l_transform =
         Transform::from_translation(Vec3::new(10.0, 5.0, 0.0)).looking_at(Vec3::ZERO, Vec3::Y);
     bsn! {
         DirectionalLight {
             color: Color::WHITE,
-            illuminance: 200.0,
+            illuminance: 10000.0,
         }
         template_value(l_transform)
 
     }
 }
 
+/// drawing newly `added` playerpositions
 fn draw_players(mut cmds: Commands, players: Query<Entity, Added<PlayerPosition>>) {
     players.iter().for_each(|entity| {
         cmds.entity(entity).queue_apply_scene(bsn! {
@@ -94,6 +96,7 @@ fn draw_players(mut cmds: Commands, players: Query<Entity, Added<PlayerPosition>
     });
 }
 
+/// moving existing player transforms to their respective updated playerpositions
 fn sync_players(mut q: Query<(&PlayerPosition, &mut Transform)>) {
     q.iter_mut().for_each(|(pos, mut transform)| {
         transform.translation = pos.0;

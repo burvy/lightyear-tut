@@ -21,6 +21,7 @@ impl Plugin for ServerPlugin {
     }
 }
 
+/// Spawn the server
 fn startup(mut cmds: Commands) -> Result {
     let server = cmds
         .spawn((
@@ -40,6 +41,10 @@ fn on_connect(trigger: On<Add, Connected>, mut cmds: Commands) {
     cmds.spawn((
         PlayerMarker,
         PlayerPosition(Vec3::ZERO),
+        ControlledBy {
+            owner: trigger.entity,
+            lifetime: Default::default(),
+        },
         Replicate::to_clients(NetworkTarget::All), // sends entity to all players
     ));
 }

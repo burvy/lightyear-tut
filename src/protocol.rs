@@ -1,6 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use bevy::prelude::*;
+use bevy::{ecs::entity::MapEntities, prelude::*};
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -16,6 +16,8 @@ impl Plugin for ProtocolPlugin {
 
         app.component::<PlayerMarker>().replicate();
         app.component::<PlayerPosition>().replicate();
+
+        app.add_plugins(input::native::InputPlugin::<Inputs>::default());
     }
 }
 
@@ -29,9 +31,14 @@ pub struct PlayerPosition(pub Vec3);
 /// A bunch of inputs that are sent over to the server
 /// and must be simulated in one tick.
 /// Can contain anything you want
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Reflect, Default)]
 pub struct Inputs {
     pub up: bool,
     pub down: bool,
     pub left: bool,
     pub right: bool,
+}
+
+impl MapEntities for Inputs {
+    fn map_entities<M: EntityMapper>(&mut self, _: &mut M) {}
 }
