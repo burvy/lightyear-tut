@@ -33,7 +33,7 @@ fn main() {
     let mode;
 
     // let user choose client or server
-    println!("Choose:\n1. Client\n2. Server\n");
+    println!("Choose:\n1. Server\n2. Client\n");
     let mut input: String = String::new();
     io::stdin().read_line(&mut input).expect("Couldn't read");
     let choice: u32 = match input.trim().parse() {
@@ -45,14 +45,14 @@ fn main() {
     };
     match choice {
         1 => {
-            mode = Mode::Client;
+            mode = Mode::Server;
             // run client app if client
-            app.add_plugins(client::ClientPlugin);
+            app.add_plugins(server::ServerPlugin);
         }
         2 => {
-            mode = Mode::Server;
+            mode = Mode::Client;
             // run server app if server
-            app.add_plugins(server::ServerPlugin);
+            app.add_plugins(client::ClientPlugin);
         }
         _ => {
             panic!("Invalid Choice! Only choices 1 & 2 are available!")
