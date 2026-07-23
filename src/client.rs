@@ -33,6 +33,11 @@ impl Plugin for ClientPlugin {
         );
         app.add_systems(Update, (draw_players, sync_players));
         app.add_observer(|_: On<Add, PlayerMarker>| info!("a player was replicated to me!"));
+
+        // Flow Point 1
+        // `WriteClientInputs` prepares inputs (up, down ..) on entity
+        // i believe then lightyear handles and
+        // sends the messages automatically through some pipeline
         app.add_systems(
             FixedPreUpdate,
             buffer_input.in_set(InputSystems::WriteClientInputs),

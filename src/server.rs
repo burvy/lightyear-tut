@@ -44,16 +44,19 @@ fn on_connect(trigger: On<Add, Connected>, mut cmds: Commands) {
     cmds.spawn((
         PlayerMarker,
         PlayerPosition(Vec3::ZERO),
+        PredictionTarget::to_clients(NetworkTarget::Single(todo!("player id"))),
         ControlledBy {
-            owner: trigger.entity,
-            lifetime: Default::default(),
+            owner: trigger.entity, // lightyear automatically links player to server entity
+            lifetime: Default::default(), // when player disconnects
         },
         Replicate::to_clients(NetworkTarget::All), // sends entity to all players
     ));
 }
 
+/// Flow Point 2
+/// the client's inputs are directly written onto ActionState
 fn movement(mut query: Query<(&mut PlayerPosition, &ActionState<Inputs>)>) {
     query.iter_mut().for_each(|(mut pos, action)| {
-        shared::apply_input(&mut pos, &action.0);
+        shared::apply_input(&mut pos, &action.0); // shared between both server and client
     });
 }

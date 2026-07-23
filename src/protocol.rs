@@ -15,7 +15,7 @@ impl Plugin for ProtocolPlugin {
         println!("Protocol Plugin added!"); // TODO: Remove debug logging
 
         app.component::<PlayerMarker>().replicate();
-        app.component::<PlayerPosition>().replicate();
+        app.component::<PlayerPosition>().replicate().predict();
 
         app.add_plugins(input::native::InputPlugin::<Inputs>::default());
     }
