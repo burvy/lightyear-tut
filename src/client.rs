@@ -71,6 +71,7 @@ fn startup(mut cmds: Commands) -> Result {
             ReplicationReceiver,
             NetcodeClient::new(auth, NetcodeConfig::default())?,
             UdpIo::default(),
+            PredictionManager::default(), // required for prediction
         ))
         .id();
     cmds.trigger(Connect { entity: client });
