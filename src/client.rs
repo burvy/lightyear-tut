@@ -24,26 +24,32 @@ pub struct ClientPlugin;
 
 impl Plugin for ClientPlugin {
     fn build(&self, app: &mut App) {
-        println!("Client Plugin added!"); // TODO: Remove debug logging
         app.add_plugins(ClientPlugins {
-            tick_duration: Duration::from_secs_f64(protocol::TIMESTEP), // serv and client must share timestep
+            tick_duration: Duration::from_secs_f64(protocol::TIMESTEP), // serv and client must share timestep from protocol
         });
         app.add_systems(
             Startup, // initialize world
             (startup, player_scene.spawn(), world_scene.spawn()),
         );
-        app.add_systems(Update, (draw_players, sync_players));
-        app.add_systems(FixedUpdate, player_movement);
+
+        app.add_systems(
+            FixedPreUpdate,
+            buffer_input.in_set(InputSystems::WriteClientInputs), // actually sends info to the server
+        );
+        app.add_systems(FixedUpdate, player_movement); // updates ourselves client side to avoid lag
+        app.add_systems(
+            Update,
+            (
+                draw_players, // draw players when they initially get detected
+                sync_players, // move players according to the confirmed positions
+            ),
+        );
         app.add_observer(|_: On<Add, PlayerMarker>| info!("a player was replicated to me!"));
 
         // Flow Point 1
         // `WriteClientInputs` prepares inputs (up, down ..) on entity
         // i believe then lightyear handles and
         // sends the messages automatically through some pipeline
-        app.add_systems(
-            FixedPreUpdate,
-            buffer_input.in_set(InputSystems::WriteClientInputs),
-        );
         app.add_observer(|t: On<Add, Controlled>, mut cmds: Commands| {
             cmds.entity(t.entity)
                 .insert(InputMarker::<Inputs>::default());
@@ -107,7 +113,13 @@ fn world_scene() -> impl Scene {
 /// drawing newly `added` playerpositions
 fn draw_players(
     mut cmds: Commands,
-    players: Query<Entity, (Added<PlayerPosition>, With<Predicted>)>,
+    players: Query<
+        Entity,
+        (
+            Added<PlayerPosition>,
+            Or<(With<Predicted>, With<Interpolated>)>,
+        ),
+    >,
 ) {
     players.iter().for_each(|entity| {
         cmds.entity(entity).queue_apply_scene(bsn! {
@@ -118,7 +130,9 @@ fn draw_players(
 }
 
 /// moving existing player transforms to their respective updated playerpositions
-fn sync_players(mut query: Query<(&PlayerPosition, &mut Transform), With<Predicted>>) {
+fn sync_players(
+    mut query: Query<(&PlayerPosition, &mut Transform), Or<(With<Predicted>, With<Interpolated>)>>,
+) {
     query.iter_mut().for_each(|(pos, mut transform)| {
         transform.translation = pos.0;
     })

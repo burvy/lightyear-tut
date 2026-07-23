@@ -7,6 +7,7 @@ use lightyear::netcode::{server_plugin::NetcodeConfig, NetcodeServer};
 use lightyear::prelude::input::native::ActionState;
 use lightyear::prelude::server::{ServerPlugins, ServerUdpIo};
 use lightyear::prelude::*;
+use lightyear::webtransport::server::WebTransportServerIo;
 
 use crate::protocol::{self, Inputs, PlayerMarker, PlayerPosition, SERVER_ADDR};
 use crate::shared;
@@ -15,7 +16,6 @@ pub struct ServerPlugin;
 
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut App) {
-        println!("Server Plugin added!"); // TODO: Remove debug logging
         app.add_plugins(ServerPlugins {
             tick_duration: Duration::from_secs_f64(protocol::TIMESTEP),
         });
@@ -27,11 +27,22 @@ impl Plugin for ServerPlugin {
 
 /// Spawn the server
 fn startup(mut cmds: Commands) -> Result {
+    let valid_addresses = vec![
+        "localhost".to_string(),
+        "127.0.0.1".to_string(),
+        "::1".to_string(),
+    ];
+    let identity = Identity::self_signed(valid_addresses)?;
+    let digest = identity.certificate_chain().as_slice()[0].hash(); // the fingerprint
+    std::fs::write("digest.txt", digest.to_string())?;
+    info!("cert digest {digest}");
     let server = cmds
         .spawn((
             NetcodeServer::new(NetcodeConfig::default()),
             LocalAddr(SERVER_ADDR),
-            ServerUdpIo::default(),
+            WebTransportServerIo {
+                certificate: identity,
+            },
         ))
         .id();
 
@@ -54,12 +65,14 @@ fn on_connect(
     cmds.spawn((
         PlayerMarker,
         PlayerPosition(Vec3::ZERO),
+        // replicate player entity to all clients (copied from server.rs line 62 simple_box)
+        Replicate::to_clients(NetworkTarget::All),
         PredictionTarget::to_clients(NetworkTarget::Single(client_id)),
+        InterpolationTarget::to_clients(NetworkTarget::AllExceptSingle(client_id)),
         ControlledBy {
-            owner: trigger.entity, // lightyear automatically links player to server entity
-            lifetime: Default::default(), // when player disconnects
+            owner: trigger.entity,
+            lifetime: Default::default(),
         },
-        Replicate::to_clients(NetworkTarget::All), // sends entity to all players
     ));
 }
 
