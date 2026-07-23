@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
+use lightyear::connection::client_of::ClientOf;
 use lightyear::connection::server::Start;
 use lightyear::netcode::{server_plugin::NetcodeConfig, NetcodeServer};
 use lightyear::prelude::input::native::ActionState;
@@ -39,12 +40,21 @@ fn startup(mut cmds: Commands) -> Result {
 }
 
 /// runs when something that has Connected has been added
-fn on_connect(trigger: On<Add, Connected>, mut cmds: Commands) {
+fn on_connect(
+    trigger: On<Add, Connected>,
+    query: Query<&RemoteId, With<ClientOf>>,
+    mut cmds: Commands,
+) {
+    // copied from simple_box's server.rs line 55
+    let Ok(client_id) = query.get(trigger.entity) else {
+        return;
+    };
+    let client_id = client_id.0; // a PeerId
     cmds.entity(trigger.entity).insert(ReplicationSender);
     cmds.spawn((
         PlayerMarker,
         PlayerPosition(Vec3::ZERO),
-        PredictionTarget::to_clients(NetworkTarget::Single(todo!("player id"))),
+        PredictionTarget::to_clients(NetworkTarget::Single(client_id)),
         ControlledBy {
             owner: trigger.entity, // lightyear automatically links player to server entity
             lifetime: Default::default(), // when player disconnects

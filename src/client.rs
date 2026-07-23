@@ -14,6 +14,7 @@ use lightyear::{
 };
 
 use crate::protocol::{self, Inputs, PlayerMarker, PlayerPosition, SERVER_ADDR};
+use crate::shared;
 
 /// Client address, each client must have a unique port. 0 lets the OS choose any available one
 const CLIENT_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
@@ -32,6 +33,7 @@ impl Plugin for ClientPlugin {
             (startup, player_scene.spawn(), world_scene.spawn()),
         );
         app.add_systems(Update, (draw_players, sync_players));
+        app.add_systems(FixedUpdate, player_movement);
         app.add_observer(|_: On<Add, PlayerMarker>| info!("a player was replicated to me!"));
 
         // Flow Point 1
@@ -102,7 +104,10 @@ fn world_scene() -> impl Scene {
 }
 
 /// drawing newly `added` playerpositions
-fn draw_players(mut cmds: Commands, players: Query<Entity, Added<PlayerPosition>>) {
+fn draw_players(
+    mut cmds: Commands,
+    players: Query<Entity, (Added<PlayerPosition>, With<Predicted>)>,
+) {
     players.iter().for_each(|entity| {
         cmds.entity(entity).queue_apply_scene(bsn! {
             Mesh3d(asset_value(Cuboid::from_length(1.0)))
@@ -112,8 +117,8 @@ fn draw_players(mut cmds: Commands, players: Query<Entity, Added<PlayerPosition>
 }
 
 /// moving existing player transforms to their respective updated playerpositions
-fn sync_players(mut q: Query<(&PlayerPosition, &mut Transform)>) {
-    q.iter_mut().for_each(|(pos, mut transform)| {
+fn sync_players(mut query: Query<(&PlayerPosition, &mut Transform), With<Predicted>>) {
+    query.iter_mut().for_each(|(pos, mut transform)| {
         transform.translation = pos.0;
     })
 }
@@ -130,4 +135,11 @@ fn buffer_input(
             right: keys.pressed(KeyCode::KeyD),
         };
     }
+}
+
+/// predict movement client side (reads OUR actionstate inputs)
+fn player_movement(mut query: Query<(&mut PlayerPosition, &ActionState<Inputs>), With<Predicted>>) {
+    query.iter_mut().for_each(|(mut pos, action)| {
+        shared::apply_input(&mut pos, &action.0);
+    })
 }
