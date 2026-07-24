@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-avian3d = "0.7"
+avian3d = { version = "0.7", features = ["serialize"] }
 bevy = "0.19"
 serde = { version = "1", features = ["derive"] }
 lightyear = { version = "0.28", features = [

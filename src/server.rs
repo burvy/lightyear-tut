@@ -5,7 +5,7 @@ use lightyear::connection::client_of::ClientOf;
 use lightyear::connection::server::Start;
 use lightyear::netcode::{server_plugin::NetcodeConfig, NetcodeServer};
 use lightyear::prelude::input::native::ActionState;
-use lightyear::prelude::server::{ServerPlugins, ServerUdpIo};
+use lightyear::prelude::server::ServerPlugins;
 use lightyear::prelude::*;
 use lightyear::webtransport::server::WebTransportServerIo;
 
@@ -34,7 +34,8 @@ fn startup(mut cmds: Commands) -> Result {
     ];
     let identity = Identity::self_signed(valid_addresses)?;
     let digest = identity.certificate_chain().as_slice()[0].hash(); // the fingerprint
-    std::fs::write("digest.txt", digest.to_string())?;
+    let digest_hex = digest.to_string().replace(":", "");
+    std::fs::write("digest.txt", &digest_hex)?;
     info!("cert digest {digest}");
     let server = cmds
         .spawn((

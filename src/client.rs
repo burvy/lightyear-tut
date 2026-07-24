@@ -7,6 +7,7 @@ use lightyear::netcode::Key;
 use lightyear::prelude::client::ClientPlugins;
 use lightyear::prelude::input::native::{ActionState, InputMarker};
 use lightyear::prelude::*;
+use lightyear::webtransport::client::WebTransportClientIo;
 use lightyear::{
     connection::client::Connect,
     link::Link,
@@ -59,6 +60,7 @@ impl Plugin for ClientPlugin {
 
 /// Automatically joins the server set with the SERVER_ADDR
 fn startup(mut cmds: Commands) -> Result {
+    let certificate_digest = std::fs::read_to_string("digest.txt")?.trim().to_string();
     let auth = Authentication::Manual {
         server_addr: SERVER_ADDR,
         client_id: SystemTime::now() // sets id as current nanosecond time (rarely overlaps)
@@ -76,7 +78,9 @@ fn startup(mut cmds: Commands) -> Result {
             Link::default(),
             ReplicationReceiver,
             NetcodeClient::new(auth, NetcodeConfig::default())?,
-            UdpIo::default(),
+            WebTransportClientIo {
+                certificate_digest: certificate_digest,
+            },
             PredictionManager::default(), // required for prediction
         ))
         .id();
